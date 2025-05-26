@@ -1,0 +1,8 @@
+/data/
+/cifar100/
+/imagenet_subset/
+/logs_rebuttal/
+/.idea/
+/script/modeltask0gw.pt
+*.pyc
+*.cpython-38.pyc

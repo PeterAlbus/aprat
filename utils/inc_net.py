@@ -474,13 +474,17 @@ class AdapterVitNet(nn.Module):
                     global_pool=False, drop_path_rate=0.0, tuning_config=tuning_config)
             return model.eval()
         
-    def forward(self, x, task_id=-1, train=False, adapter_id=-1, weight=None):
+    def forward(self, x, task_id=-1, train=False, adapter_id=-1, weight=None, return_features=False):
         with torch.no_grad():
             if self.original_backbone is not None:
                 cls_features = self.original_backbone(x)['pre_logits']
             else:
                 cls_features = None
+        x_temp = x.clone()
         x = self.backbone(x, task_id=task_id, cls_features=cls_features, train=train, adapter_id=adapter_id, weight=weight)
+        if return_features:
+            features = self.backbone.forward_features(x_temp, cls_features=cls_features, adapter_id=adapter_id)
+            return x, features
         return x
 
 
