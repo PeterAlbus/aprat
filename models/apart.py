@@ -254,7 +254,8 @@ class Learner(BaseLearner):
                 inputs, targets = inputs.to(self._device), targets.to(self._device)
                 weight = cls_num_list[targets]
 
-                output, image_features = self._network(inputs, task_id=self._cur_task, train=True, weight=weight, return_features=True) 
+                output = self._network(inputs, task_id=self._cur_task, train=True, weight=weight) 
+                image_features = output["pre_logits"]
                  # 使用CLIP模型获取标签特征
                 labels = [self.class_names[self.class_order[t.item()]] for t in targets]
                 text_descriptions = [f"A photo of a {label}" for label in labels]
