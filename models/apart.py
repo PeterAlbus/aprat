@@ -98,8 +98,8 @@ class Learner(BaseLearner):
         # 假设图像特征和文本特征的维度分别为 512 和 256，目标投影维度为 128
         # self.image_projection_head = FeatureProjectionHead(input_dim=64, output_dim=64).to(device) # CIFAR100 ResNet32
         # self.image_projection_head = FeatureProjectionHead(input_dim=512, output_dim=64).to(device) # Food101/ImageNetSubset ResNet18
-        self.image_projection_head = FeatureProjectionHead(input_dim=1024, output_dim=64).to(self._device) # ViT (vit_l_32)
-        # self.image_projection_head = FeatureProjectionHead(input_dim=768, output_dim=64).to(device) # swin_t
+        # self.image_projection_head = FeatureProjectionHead(input_dim=1024, output_dim=64).to(self._device) # ViT (vit_l_32)
+        self.image_projection_head = FeatureProjectionHead(input_dim=768, output_dim=64).to(self._device) # swin_t
         # self.image_projection_head = FeatureProjectionHead(input_dim=192, output_dim=64).to(device) # CIFAR100 - ViT Tiny 
         self.text_projection_head = FeatureProjectionHead(input_dim=512, output_dim=64).to(self._device)
 
@@ -126,7 +126,6 @@ class Learner(BaseLearner):
 
     def project_features(self, image_features, text_features):
         text_features = text_features.to(torch.float32)
-        print(f"Image features: {image_features}")
         image_projection = self.image_projection_head(image_features)  # 投影图像特征
         text_projection = self.text_projection_head(text_features)  # 投影文本特征
         return image_projection, text_projection       
@@ -268,7 +267,7 @@ class Learner(BaseLearner):
                 mapped_image_features, mapped_text_features = self.project_features(image_features, text_features)
                 # 计算基于文本关系的损失
                 loss_feature = relation_based_loss(mapped_image_features, mapped_text_features, targets, temperature=0.7)
-                logging.info(f"Loss feature: {loss_feature.item()}")
+                # logging.info(f"Loss feature: {loss_feature.item()}")
                 pool = output["pool_id"]
                 logits = output["logits"]
                 logits = logits[:, self._known_classes : self._total_classes] 
@@ -286,7 +285,8 @@ class Learner(BaseLearner):
                 loss += loss_all
                 loss_few = - (pool.squeeze(1) * (target * torch.log(nn.Softmax(dim=-1)(logits_few)+1e-7)).sum(dim=1)).sum()
                 loss += loss_few
-                loss /= 3  
+                loss += loss_feature
+                loss /= 4  
                     
                 weight_norm = torch.where(weight <= self.theta, 1.0, 0.1) 
                 weight_weight = torch.where(weight <= self.theta, 10.0, 1.0)
