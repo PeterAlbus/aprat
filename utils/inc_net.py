@@ -480,7 +480,6 @@ class AdapterVitNet(nn.Module):
                 cls_features = self.original_backbone(x)['pre_logits']
             else:
                 cls_features = None
-        x_temp = x.clone()
         x = self.backbone(x, task_id=task_id, cls_features=cls_features, train=train, adapter_id=adapter_id, weight=weight)
         return x
 
