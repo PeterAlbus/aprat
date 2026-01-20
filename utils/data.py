@@ -30,6 +30,7 @@ class iCIFAR10(iData):
     def download_data(self):
         train_dataset = datasets.cifar.CIFAR10("./data", train=True, download=True)
         test_dataset = datasets.cifar.CIFAR10("./data", train=False, download=True)
+        self.classes = train_dataset.classes
         self.train_data, self.train_targets = train_dataset.data, np.array(
             train_dataset.targets
         )
@@ -58,6 +59,7 @@ class iCIFAR100(iData):
     def download_data(self):
         train_dataset = datasets.cifar.CIFAR100("./data", train=True, download=True)
         print("class name: ", train_dataset.classes)
+        self.classes = train_dataset.classes
         test_dataset = datasets.cifar.CIFAR100("./data", train=False, download=True)
         self.train_data, self.train_targets = train_dataset.data, np.array(
             train_dataset.targets

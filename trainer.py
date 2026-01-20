@@ -64,6 +64,7 @@ def _train(args):
     args["nb_classes"] = data_manager.nb_classes # update args
     args["nb_tasks"] = data_manager.nb_tasks
     args["lt_list"] = data_manager.longtaillist
+    args["class_names"] = data_manager.class_names
 
     model = factory.get_model(args["model_name"], args)
 

@@ -5,15 +5,35 @@ from torch import nn
 from backbone.linears import SimpleLinear, SplitCosineLinear, CosineLinear
 from backbone.prompt import CodaPrompt
 import timm
+from utils.semantic_init import get_semantic_initialization
 
 def get_backbone(args, pretrained=False):
     name = args["backbone_type"].lower()
     # SimpleCIL or SimpleCIL w/ Finetune
     if '_adapter' in name:
         ffn_num = args["ffn_num"]
-        if args["model_name"] == "apart" :
+        if args["model_name"] == "apart" or args["model_name"] == "apart_v2":
             from backbone import vision_transformer_adapter_pool_a
             from easydict import EasyDict
+
+            # Semantic-Anchored Initialization (SAI)
+            prompt_key_init = "uniform"
+            prompt_key_init_tensor = None
+            if "class_names" in args and args["class_names"]:
+                device = args["device"][0] if isinstance(args["device"], list) else args["device"]
+                try:
+                    sai_tensor = get_semantic_initialization(
+                        class_names=args["class_names"],
+                        pool_size=args["pool_size"],
+                        target_dim=768,
+                        device=device
+                    )
+                    if sai_tensor is not None:
+                        prompt_key_init = "semantic"
+                        prompt_key_init_tensor = sai_tensor
+                except Exception as e:
+                    logging.warning(f"SAI generation failed: {e}. Fallback to uniform.")
+
             tuning_config = EasyDict(
                 batchwise_prompt = args["batchwise_prompt"],
                 # AdaptFormer
@@ -27,6 +47,9 @@ def get_backbone(args, pretrained=False):
                 # VPT related
                 vpt_on=False,
                 vpt_num=0,
+                # SAI
+                prompt_key_init=prompt_key_init,
+                prompt_key_init_tensor=prompt_key_init_tensor,
             )
             if name == "vit_b16_224_adapter_pool":
                 model = vision_transformer_adapter_pool_a.vit_base_patch16_224_adapter(num_classes=args["nb_classes"],

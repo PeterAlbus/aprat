@@ -113,6 +113,7 @@ class AdapterPool(nn.Module):
                 config=None,
                 prompt_init='uniform',
                 prompt_key_init='uniform',
+                prompt_key_init_tensor=None,
                 ) -> None:
         super().__init__()
         self.pool_size = pool_size
@@ -125,7 +126,7 @@ class AdapterPool(nn.Module):
         self.top_k = top_k
         self.batchwise_prompt = config.batchwise_prompt
         self.prompt_init = 'uniform'
-        self.prompt_key_init = 'uniform'
+        self.prompt_key_init = prompt_key_init
     
         self.n_adapter = n_blocks * pool_size
         self.pool = nn.ModuleList([Adapter(self.config, dropout=0.1, bottleneck=config.ffn_num,
@@ -142,6 +143,12 @@ class AdapterPool(nn.Module):
         elif prompt_key_init == 'uniform':
             self.prompt_key = nn.Parameter(torch.randn(key_shape))
             nn.init.uniform_(self.prompt_key, -1, 1)
+        elif prompt_key_init == 'semantic':
+            if prompt_key_init_tensor is None:
+                raise ValueError("prompt_key_init is 'semantic' but prompt_key_init_tensor is None")
+            if prompt_key_init_tensor.shape != key_shape:
+                 raise ValueError(f"Shape mismatch for semantic init: {prompt_key_init_tensor.shape} vs {key_shape}")
+            self.prompt_key = nn.Parameter(prompt_key_init_tensor)
 
     def l2_normalize(self, x, dim=None, epsilon=1e-12):
         """Normalizes a given vector or matrix."""
@@ -383,8 +390,13 @@ class VisionTransformer(nn.Module):
         self.norm = norm_layer(embed_dim)
 
         if self.tuning_config["ffn_adapt"]:
-            self.pool = AdapterPool(pool_size=pool_size , n_blocks= 12-self.n_global, n_emb=embed_dim, n_neck=tuning_config.ffn_num, config=tuning_config)
-            self.pool_few = AdapterPool(pool_size=pool_size , n_blocks= 12-self.n_global,n_emb=embed_dim, n_neck=tuning_config.ffn_num, config=tuning_config)
+            prompt_key_init = getattr(tuning_config, 'prompt_key_init', 'uniform')
+            prompt_key_init_tensor = getattr(tuning_config, 'prompt_key_init_tensor', None)
+            
+            self.pool = AdapterPool(pool_size=pool_size , n_blocks= 12-self.n_global, n_emb=embed_dim, n_neck=tuning_config.ffn_num, config=tuning_config,
+                                    prompt_key_init=prompt_key_init, prompt_key_init_tensor=prompt_key_init_tensor)
+            self.pool_few = AdapterPool(pool_size=pool_size , n_blocks= 12-self.n_global,n_emb=embed_dim, n_neck=tuning_config.ffn_num, config=tuning_config,
+                                        prompt_key_init=prompt_key_init, prompt_key_init_tensor=prompt_key_init_tensor)
 
         # Representation layer
         if representation_size and not distilled:

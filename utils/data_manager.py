@@ -192,6 +192,12 @@ class DataManager(object):
         idata = _get_idata(dataset_name, self.args)
         idata.download_data()
 
+        # Save class names if available
+        if hasattr(idata, 'classes'):
+            self.class_names = idata.classes
+        else:
+            self.class_names = None
+
         # Data
         self._train_data, self._train_targets = idata.train_data, idata.train_targets
         self._test_data, self._test_targets = idata.test_data, idata.test_targets
