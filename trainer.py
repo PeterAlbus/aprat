@@ -64,7 +64,14 @@ def _train(args):
     args["nb_classes"] = data_manager.nb_classes # update args
     args["nb_tasks"] = data_manager.nb_tasks
     args["lt_list"] = data_manager.longtaillist
-    args["class_names"] = data_manager.class_names
+    
+    # Only provide class names for the initial task (Base Task) to SAI
+    if data_manager.class_names is not None and hasattr(data_manager, '_class_order'):
+        base_indices = data_manager._class_order[:args["init_cls"]]
+        args["class_names"] = [data_manager.class_names[i] for i in base_indices]
+        logging.info(f"SAI Initialization: Selected {len(args['class_names'])} base classes.")
+    else:
+        args["class_names"] = None
 
     model = factory.get_model(args["model_name"], args)
 
