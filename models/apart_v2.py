@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from utils.inc_net import AdapterVitNet
 from models.base import BaseLearner
 from utils.toolkit import tensor2numpy, accuracy
+from utils.semantic_gatekeeper import SemanticGatekeeper
 
 num_workers = 8
 
@@ -112,6 +113,42 @@ class Learner(BaseLearner):
         if len(self._multiple_gpus) > 1:
             print('Multiple GPUs')
             self._network = nn.DataParallel(self._network, self._multiple_gpus)
+        
+        # -------------------------------------------------------------------------
+        # Semantic Gatekeeper: Dynamic Adapter Expansion
+        # -------------------------------------------------------------------------
+        logging.info("Semantic Gatekeeper: Dynamic Adapter Expansion, task %d" , self._cur_task)
+        if self._cur_task > 0: # Only expand for incremental tasks (Base task uses SAI init)
+            # 1. Get new class names for the current task
+            # The indices for the current task are:
+            task_start_idx = self._known_classes
+            task_end_idx = self._total_classes
+            
+            # Map global indices to class names using data_manager
+            # Note: data_manager._class_order maps [0, 1, ...] -> [original_label_x, original_label_y, ...]
+            # data_manager.class_names maps original_label -> string name
+            
+            if data_manager.class_names is not None and hasattr(data_manager, '_class_order'):
+                current_task_indices = data_manager._class_order[task_start_idx:task_end_idx]
+                new_class_names = [data_manager.class_names[i] for i in current_task_indices]
+                
+                logging.info(f"Checking expansion for {len(new_class_names)} new classes: {new_class_names}")
+                
+                # 2. Call Semantic Gatekeeper
+                # Access the adapter pool
+                # self._network is AdapterVitNet -> backbone (VisionTransformer) -> pool (AdapterPool)
+                # Handle DataParallel wrapper if present
+                if isinstance(self._network, nn.DataParallel):
+                    adapter_pool = self._network.module.backbone.pool
+                else:
+                    adapter_pool = self._network.backbone.pool
+                
+                gatekeeper = SemanticGatekeeper(threshold=0.15) # Threshold can be tuned or moved to args
+                gatekeeper.process_new_classes(adapter_pool, new_class_names, self._device)
+                
+            else:
+                logging.warning("Skipping Semantic Gatekeeper: class names not available.")
+        # -------------------------------------------------------------------------
 
         self._train(self.train_loader, self.test_loader)
         

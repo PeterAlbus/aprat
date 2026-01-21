@@ -19,20 +19,20 @@ def get_backbone(args, pretrained=False):
             # Semantic-Anchored Initialization (SAI)
             prompt_key_init = "uniform"
             prompt_key_init_tensor = None
-            if "class_names" in args and args["class_names"]:
-                device = args["device"][0] if isinstance(args["device"], list) else args["device"]
-                try:
-                    sai_tensor = get_semantic_initialization(
-                        class_names=args["class_names"],
-                        pool_size=args["pool_size"],
-                        target_dim=768,
-                        device=device
-                    )
-                    if sai_tensor is not None:
-                        prompt_key_init = "semantic"
-                        prompt_key_init_tensor = sai_tensor
-                except Exception as e:
-                    logging.warning(f"SAI generation failed: {e}. Fallback to uniform.")
+            # if "class_names" in args and args["class_names"]:
+            #     device = args["device"][0] if isinstance(args["device"], list) else args["device"]
+            #     try:
+            #         sai_tensor = get_semantic_initialization(
+            #             class_names=args["class_names"],
+            #             pool_size=args["pool_size"],
+            #             target_dim=768,
+            #             device=device
+            #         )
+            #         if sai_tensor is not None:
+            #             prompt_key_init = "semantic"
+            #             prompt_key_init_tensor = sai_tensor
+            #     except Exception as e:
+            #         logging.warning(f"SAI generation failed: {e}. Fallback to uniform.")
 
             tuning_config = EasyDict(
                 batchwise_prompt = args["batchwise_prompt"],

@@ -156,6 +156,54 @@ class AdapterPool(nn.Module):
         x_inv_norm = torch.rsqrt(torch.maximum(square_sum, torch.tensor(epsilon, device=x.device)))
         return x * x_inv_norm     
 
+    def add_adapter(self, new_key_tensor, source_idx=None):
+        """
+        Dynamically adds a new adapter to the pool.
+        
+        Args:
+            new_key_tensor (torch.Tensor): The new key to add. Shape (1, n_emb).
+            source_idx (int, optional): The index of the adapter to copy weights from (Knowledge Inheritance).
+        """
+        device = self.prompt_key.device
+        new_key_tensor = new_key_tensor.to(device)
+        
+        # 1. Update Key
+        new_prompt_key = torch.cat([self.prompt_key.data, new_key_tensor], dim=0)
+        self.prompt_key = nn.Parameter(new_prompt_key) # This resets grad requirement, handled by optimizer re-init
+        
+        # 2. Add Adapters (one per block)
+        # self.pool is a ModuleList of length n_blocks * pool_size
+        # The new adapters should be appended.
+        # The indexing logic in forward_features (blk.adapt_list.append(POOL.pool[idx_group * POOL.n_block + idx - self.n_global]))
+        # implies that adapters are grouped by adapter index, then block index.
+        # So adapter k, block b is at index k * n_block + b.
+        # Appending new adapters means they will be at indices (pool_size) * n_block + b.
+        
+        import logging
+        logging.info(f"Expanding AdapterPool from {self.pool_size} to {self.pool_size + 1}...")
+        
+        for i in range(self.n_block):
+            # Create new adapter
+            new_adapter = Adapter(self.config, dropout=0.1, bottleneck=self.config.ffn_num,
+                                    init_option=self.config.ffn_adapter_init_option,
+                                    adapter_scalar=self.config.ffn_adapter_scalar,
+                                    adapter_layernorm_option=self.config.ffn_adapter_layernorm_option,
+                                    ).to(device)
+            
+            # Warm Start / Knowledge Inheritance
+            if source_idx is not None:
+                # Calculate index of source adapter for this block
+                src_adapter_idx = source_idx * self.n_block + i
+                src_adapter = self.pool[src_adapter_idx]
+                new_adapter.load_state_dict(src_adapter.state_dict())
+                logging.debug(f"Block {i}: Inherited weights from adapter {source_idx}")
+            
+            self.pool.append(new_adapter)
+            
+        self.pool_size += 1
+        self.n_adapter += self.n_block
+        logging.info(f"AdapterPool expansion complete. New pool size: {self.pool_size}")
+
     def forward(self, x_embed, prompt_mask=None, cls_features=None):
         out = dict()
         if 1:
