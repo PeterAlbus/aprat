@@ -630,6 +630,56 @@ def vit_base_patch16_224_adapter(pretrained=False, **kwargs):
             fc_weight = state_dict.pop(key)
             state_dict[key.replace('mlp.', '')] = fc_weight
 
+    # import clip
+    # import logging
+    # logging.info("Loading CLIP-ViT-B/16 pretrained weights...")
+    # clip_model, _ = clip.load("ViT-B/16", device='cpu')
+    # clip_state_dict = clip_model.visual.state_dict()
+    # state_dict = {}
+
+    # # Map CLIP weights to VisionTransformer
+    # state_dict['patch_embed.proj.weight'] = clip_state_dict['conv1.weight']
+    # state_dict['cls_token'] = clip_state_dict['class_embedding'].view(1, 1, -1)
+    # state_dict['pos_embed'] = clip_state_dict['positional_embedding'].unsqueeze(0)
+    
+    # if 'ln_post.weight' in clip_state_dict:
+    #     state_dict['norm.weight'] = clip_state_dict['ln_post.weight']
+    #     state_dict['norm.bias'] = clip_state_dict['ln_post.bias']
+
+    # for key, val in clip_state_dict.items():
+    #     if 'transformer.resblocks' in key:
+    #         # key example: transformer.resblocks.0.attn.in_proj_weight
+    #         parts = key.split('.')
+    #         block_idx = parts[2]
+    #         module_name = parts[3]
+    #         target_prefix = f"blocks.{block_idx}"
+            
+    #         if module_name == 'attn':
+    #             sub_module = parts[4]
+    #             suffix = parts[-1] # weight or bias
+    #             if 'in_proj' in sub_module:
+    #                 # split q, k, v
+    #                 q, k, v = val.chunk(3, dim=0)
+    #                 param_type = suffix.split('_')[-1] # weight or bias
+    #                 state_dict[f"{target_prefix}.attn.q_proj.{param_type}"] = q
+    #                 state_dict[f"{target_prefix}.attn.k_proj.{param_type}"] = k
+    #                 state_dict[f"{target_prefix}.attn.v_proj.{param_type}"] = v
+    #             elif 'out_proj' in sub_module:
+    #                 state_dict[f"{target_prefix}.attn.proj.{suffix}"] = val
+    #         elif module_name == 'ln_1':
+    #             suffix = parts[-1]
+    #             state_dict[f"{target_prefix}.norm1.{suffix}"] = val
+    #         elif module_name == 'ln_2':
+    #             suffix = parts[-1]
+    #             state_dict[f"{target_prefix}.norm2.{suffix}"] = val
+    #         elif module_name == 'mlp':
+    #             sub_module = parts[4]
+    #             suffix = parts[-1]
+    #             if 'c_fc' in sub_module:
+    #                 state_dict[f"{target_prefix}.fc1.{suffix}"] = val
+    #             elif 'c_proj' in sub_module:
+    #                 state_dict[f"{target_prefix}.fc2.{suffix}"] = val
+
     msg = model.load_state_dict(state_dict, strict=False)
     print(msg)
     print("OK!")
