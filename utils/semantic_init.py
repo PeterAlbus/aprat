@@ -101,6 +101,17 @@ def get_semantic_initialization(class_names, pool_size, target_dim, device='cuda
     kmeans.fit(text_features_np)
     centroids = kmeans.cluster_centers_ # Shape: (pool_size, clip_dim)
     
+    # Log clustering results
+    cluster_map = {}
+    for idx, label in enumerate(kmeans.labels_):
+        if label not in cluster_map:
+            cluster_map[label] = []
+        cluster_map[label].append(class_names[idx])
+        
+    logging.info("SAI Clustering Results:")
+    for label in sorted(cluster_map.keys()):
+        logging.info(f"  Cluster {label}: {', '.join(cluster_map[label])}")
+
     # 3. Dimension Alignment
     centroids_aligned = align_dimensions(centroids, target_dim, device)
     
