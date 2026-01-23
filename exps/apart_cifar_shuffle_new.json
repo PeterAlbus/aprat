@@ -6,7 +6,7 @@
     "fixed_memory": false,
     "shuffle": true,
     "init_cls": 50,
-    "increment": 5,
+    "increment": 10,
     "model_name": "apart_v2",
     "backbone_type": "vit_b16_224_adapter_pool",
     "get_original_backbone": true,

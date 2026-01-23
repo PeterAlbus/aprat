@@ -143,7 +143,7 @@ class Learner(BaseLearner):
                 else:
                     adapter_pool = self._network.backbone.pool
                 
-                gatekeeper = SemanticGatekeeper(threshold=0.18) # Threshold can be tuned or moved to args
+                gatekeeper = SemanticGatekeeper(threshold=0.9) # Threshold can be tuned or moved to args
                 gatekeeper.process_new_classes(adapter_pool, new_class_names, self._device)
                 
             else:
